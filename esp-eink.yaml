@@ -1,0 +1,176 @@
+esphome:
+  name: esp-eink-4in2
+  friendly_name: ESP-EINK-4IN2
+
+esp8266:
+  board: d1_mini
+#  nodemcuv2
+logger:
+  # level: INFO
+  # logs:
+  #   wifi.component: INFO
+
+api:
+  encryption:
+    key: "+28wt28vIk3GScOoCx/ObIFdx7TNCmRdNQtnJq26MrQ="
+
+ota:
+  - platform: esphome
+    password: "599aed84bf479c84388e54d6bbc3fe87"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  id: espwifi
+  ap:
+    ssid: "Esp-Eink Fallback Hotspot"
+    password: "2Wne1NJvw01w"
+  on_connect:
+    component.update: epd4in2
+
+captive_portal:
+
+sensor:
+  - platform: dht
+    pin: 4
+    model: DHT11
+    update_interval: 2s
+    temperature:
+      id: room_temp
+      name: "Living Room Temperature"
+    humidity:
+      id: room_humid
+      name: "Living Room Humidity"
+
+font:
+  - file: 'fonts/GoogleSans-Medium.ttf'
+    id: sm1
+    size: 20
+  - file: 'fonts/GoogleSans-Medium.ttf'
+    id: sm2
+    size: 22
+  - file: 'fonts/materialdesignicons-webfont.ttf'
+    id: font_battery_glyphs
+    size: 22
+    glyphs: &mdi-battery-glyphs
+      - "\U000F10CD" # mdi-battery-warning
+      - "\U000F12A3" # mdi-battery-high
+      - "\U000F12A2" # mdi-battery-med
+      - "\U000F12A1" # mdi-battery-low
+      - "\U000F05AA" # wifi off
+      - "\U000F05A9" # wifi on
+      - "\U000F0E8E" # sync
+      - "\U000F0E8F" # sync 2
+      - "\U000F0590" # cloudy
+      - "\U000F00B0" # ble
+  - file: "fonts/GoogleSans-Medium.ttf"
+    id: font_date
+    size: 30   
+  - file: "fonts/GoogleSans-Bold.ttf"
+    id: font_time
+    size: 90
+  - file: "fonts/GoogleSans-Bold.ttf"
+    id: font_value
+    size: 35
+
+    
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      id: wifi_ip
+      name: ESP IP Address
+      address_0:
+        name: ESP IP Address 0
+
+    ssid:
+      id: wifi_ssid
+      name: ESP Connected SSID
+    bssid:
+      name: ESP Connected BSSID
+    mac_address:
+      name: ESP Mac Wifi Address
+    scan_results:
+      name: ESP Latest Scan Results
+    dns_address:
+      name: ESP DNS Address
+
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: Asia/Shanghai
+    servers:
+     - 120.25.115.20
+     - 114.67.103.73
+     - 202.112.31.197
+     
+color:
+  - id: color_blk
+    red: 100%
+    green: 100%
+    blue: 100%
+    white: 100%
+  - id: color_red
+    red: 100%
+    green: 0%
+    blue: 0%
+    white: 0%
+
+spi:
+  clk_pin:  14
+  mosi_pin: 13
+
+display:
+  - platform: waveshare_epaper
+    id: epd4in2
+    cs_pin: 15
+    dc_pin: 16
+    busy_pin: 2
+    update_interval: never
+    model: 4.20in
+    lambda: |
+      auto cnt  = 1;
+      auto xres = 400;
+      auto yres = 300;
+
+      //it.printf(0, 32* cnt, id(sm2), color_blk, TextAlign::TOP_LEFT, "%s","sat"); cnt = cnt + 1;
+      //it.printf(0, 32* cnt, id(sm2), color_red, TextAlign::TOP_LEFT, "%s","sunny"); cnt = cnt + 1;
+      //it.printf(0, 32* cnt, id(font_battery_glyphs), color_red, TextAlign::TOP_LEFT, "%s",  "\U000F05A9" ); cnt = cnt + 1;
+      //it.printf(0, 32* cnt, id(font_battery_glyphs), color_red, TextAlign::TOP_LEFT, "%s",  "\U000F0E8E" ); cnt = cnt + 1;
+      //it.printf(0, 32* cnt, id(font_battery_glyphs), color_red, TextAlign::TOP_LEFT, "%s",  "\U000F0E8F" ); cnt = cnt + 1;
+      //it.printf(0, 32* cnt, id(font_battery_glyphs), color_red, TextAlign::TOP_LEFT, "%s",  "\U000F0590" ); cnt = cnt + 1;
+      //it.printf(0, 32* cnt, id(font_battery_glyphs), color_red, TextAlign::TOP_LEFT, "%s",  "\U000F00B0" ); cnt = cnt + 1;
+
+      std::map<std::string, std::string> wifi_state { 
+          { "on",  "\U000F05A9" },          // wifi on 
+          { "off", "\U000F05AA" }           // wifi off
+      };
+
+      if (id(espwifi).is_connected()) {
+
+          it.printf(0,      0, id(sm1),                 color_red, TextAlign::TOP_LEFT,   "%s",  id(wifi_ip).state.c_str()   );
+          it.printf(xres/2, 0, id(sm1),                 color_red, TextAlign::TOP_CENTER, "%s",  id(wifi_ssid).state.c_str() );
+          it.printf(xres-20,0, id(font_battery_glyphs), color_red, TextAlign::TOP_LEFT,  "%s",  "\U000F05A9" );
+
+          it.strftime(xres/2, 65,     id(font_date), TextAlign::TOP_CENTER, "%A %b %d ", id(sntp_time).now());
+          it.strftime(xres/2, yres/2 - 30, id(font_time), TextAlign::TOP_CENTER, "%I:%M %p",  id(sntp_time).now()); //"%H:%M",         
+
+      } else {
+          it.printf(0 ,      0,          id(font_battery_glyphs), color_red, TextAlign::TOP_RIGHT,  "%s",  "\U000F05AA" );
+          it.printf(xres/2 , yres/2 -17, id(font_value),          color_red, TextAlign::TOP_CENTER,  "WiFi Connecting!" );
+      }
+      
+      it.printf(xres/2 - 100, yres- 40,  id(font_date),          color_red, TextAlign::TOP_CENTER,  "%0.1f°C",   id(room_temp).state );
+      it.printf(xres/2 + 100, yres- 40,  id(font_date),          color_red, TextAlign::TOP_CENTER,  "%0.1f%%",   id(room_humid).state);
+
+
+interval:
+  - interval: 1min
+    then:
+      - component.update: epd4in2
+
+#define EPD_SCK_PIN   14 //D5
+#define EPD_MOSI_PIN  13 //D7
+#define EPD_CS_PIN    15 //D8
+#define EPD_RST_PIN   5  //-1 RESET
+#define EPD_DC_PIN    16 //D0
+#define EPD_BUSY_PIN  2 //D4

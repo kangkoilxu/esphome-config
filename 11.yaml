@@ -1,0 +1,30 @@
+esphome:
+  name: bk11
+  friendly_name: bk11
+
+rtl87xx:
+  board: wr3e
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "5J2WObDwoJ05r9+NorjNT3vJxS+YTwUy9FcaiGdyr5U="
+
+ota:
+  - platform: esphome
+    password: "8c97f214c8655fd5ba41fb6a88c3a2f1"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "11 Fallback Hotspot"
+    password: "OIVZDBFtm6Yx"
+
+captive_portal:
+    
